@@ -60,20 +60,34 @@ JSAny? jsify(Object? dartObject) {
   if (dartObject is String) return dartObject.toJS;
   if (dartObject is num) return dartObject.toJS;
   if (dartObject is bool) return dartObject.toJS;
-  if (dartObject is List) {
-    // Use JSON roundtrip for reliable WASM compatibility
-    // Direct .toJS on List<JSAny?> has type issues in dart2wasm
-    return jsonParse(jsonEncode(dartObject));
-  }
-  if (dartObject is Map) {
-    return jsifyMap(Map<String, dynamic>.from(dartObject));
-  }
+
   // For objects that already have jsObject property (like Layer, Source wrappers)
   if (dartObject is JsObjectWrapper) {
     return dartObject.jsObject as JSAny;
   }
-  // Fallback: assume it's already a JSAny
-  return dartObject as JSAny?;
+
+  if (dartObject is Map) {
+    return jsifyMap(Map<String, dynamic>.from(dartObject));
+  }
+
+  // Check for List explicitly first (more reliable in WASM than Iterable check)
+  if (dartObject is List) {
+    return jsonParse(jsonEncode(dartObject));
+  }
+
+  // Check for other Iterables
+  if (dartObject is Iterable) {
+    return jsonParse(jsonEncode(dartObject.toList()));
+  }
+
+  // Fallback: try JSON roundtrip for any JSON-serializable object
+  // This handles cases where type checks fail in WASM
+  try {
+    return jsonParse(jsonEncode(dartObject));
+  } catch (_) {
+    // Last resort: assume it's already a JSAny
+    return dartObject as JSAny?;
+  }
 }
 
 /// Converts a Dart Map to a JavaScript object.
