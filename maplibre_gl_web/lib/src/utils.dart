@@ -60,14 +60,10 @@ JSAny? jsify(Object? dartObject) {
   if (dartObject is String) return dartObject.toJS;
   if (dartObject is num) return dartObject.toJS;
   if (dartObject is bool) return dartObject.toJS;
-  // Check for List first, then Iterable as fallback
-  // Use JSON roundtrip for reliable WASM compatibility
-  // Direct .toJS on List<JSAny?> has type issues in dart2wasm
   if (dartObject is List) {
+    // Use JSON roundtrip for reliable WASM compatibility
+    // Direct .toJS on List<JSAny?> has type issues in dart2wasm
     return jsonParse(jsonEncode(dartObject));
-  }
-  if (dartObject is Iterable) {
-    return jsonParse(jsonEncode(dartObject.toList()));
   }
   if (dartObject is Map) {
     return jsifyMap(Map<String, dynamic>.from(dartObject));
@@ -76,18 +72,8 @@ JSAny? jsify(Object? dartObject) {
   if (dartObject is JsObjectWrapper) {
     return dartObject.jsObject as JSAny;
   }
-  // Check if it's already a JS value (JSAny)
-  // ignore: invalid_runtime_check_with_js_interop_types
-  if (dartObject is JSAny) {
-    return dartObject;
-  }
-  // Fallback: try to encode as JSON if possible
-  try {
-    return jsonParse(jsonEncode(dartObject));
-  } catch (_) {
-    // Last resort: this may fail for non-JS types
-    return dartObject as JSAny?;
-  }
+  // Fallback: assume it's already a JSAny
+  return dartObject as JSAny?;
 }
 
 /// Converts a Dart Map to a JavaScript object.
