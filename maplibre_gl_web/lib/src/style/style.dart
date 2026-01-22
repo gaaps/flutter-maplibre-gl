@@ -4,6 +4,7 @@ import 'package:maplibre_gl_web/src/interop/interop.dart';
 import 'package:maplibre_gl_web/src/style/evaluation_parameters.dart';
 import 'package:maplibre_gl_web/src/style/style_image.dart';
 import 'package:maplibre_gl_web/src/ui/map.dart';
+import 'package:maplibre_gl_web/src/utils.dart' as utils;
 
 class StyleSetterOptions extends JsObjectWrapper<StyleSetterOptionsJsImpl> {
   bool get validate => jsObject.validate;
@@ -175,8 +176,9 @@ class StyleFunction extends JsObjectWrapper<StyleFunctionJsImpl> {
     dynamic stops,
   }) {
     final jsImpl = StyleFunctionJsImpl();
-    if (base != null) jsImpl.base = base.toJS;
-    if (stops != null) jsImpl.stops = stops.toJS;
+    // Use jsify for WASM compatibility - dynamic.toJS has type issues in dart2wasm
+    if (base != null) jsImpl.base = utils.jsify(base);
+    if (stops != null) jsImpl.stops = utils.jsify(stops);
     return StyleFunction.fromJsObject(jsImpl);
   }
 

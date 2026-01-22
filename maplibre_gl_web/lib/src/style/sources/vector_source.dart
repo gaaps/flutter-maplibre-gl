@@ -1,4 +1,6 @@
+import 'dart:convert' show jsonEncode;
 import 'dart:js_interop';
+import 'package:maplibre_gl_web/src/interop/js.dart' show jsonParse;
 import 'package:maplibre_gl_web/src/interop/style/sources/vector_source_interop.dart';
 import 'package:maplibre_gl_web/src/style/sources/source.dart';
 
@@ -23,7 +25,8 @@ class VectorSource extends Source<VectorSourceJsImpl> {
     }
     return VectorSource.fromJsObject(VectorSourceJsImpl(
       type: 'vector',
-      tiles: tiles?.map((s) => s.toJS).toList().toJS,
+      // Use JSON roundtrip for WASM compatibility - List.toJS has type issues in dart2wasm
+      tiles: tiles != null ? jsonParse(jsonEncode(tiles)) : null,
     ));
   }
 

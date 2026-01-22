@@ -13,7 +13,8 @@ class FeatureCollection extends JsObjectWrapper<FeatureCollectionJsImpl> {
   }) {
     return FeatureCollection.fromJsObject(FeatureCollectionJsImpl(
       type: 'FeatureCollection',
-      features: features.map((f) => f.jsObject).toList().toJS,
+      // Use jsArrayOf for WASM compatibility - List.toJS has type issues in dart2wasm
+      features: jsArrayOf(features.map((f) => f.jsObject).toList()),
     ));
   }
 

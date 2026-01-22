@@ -51,3 +51,23 @@ JSObject createJsObject() {
 /// Parse a JSON string using JavaScript's native JSON.parse.
 @JS('JSON.parse')
 external JSAny jsonParse(String text);
+
+/// Creates an empty JavaScript array.
+@JS('Array')
+external JSArray<T> _newJsArray<T extends JSAny?>();
+
+/// Extension to add push method to JSArray.
+extension JSArrayPush<T extends JSAny?> on JSArray<T> {
+  external void push(T item);
+}
+
+/// Creates a JavaScript array from a list of JS objects.
+/// This is a WASM-compatible alternative to List<JSAny?>.toJS
+/// which has type inference issues in dart2wasm.
+JSArray<T> jsArrayOf<T extends JSAny?>(List<T> items) {
+  final arr = _newJsArray<T>();
+  for (final item in items) {
+    arr.push(item);
+  }
+  return arr;
+}

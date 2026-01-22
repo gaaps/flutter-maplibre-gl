@@ -1,3 +1,4 @@
+import 'dart:convert' show jsonEncode;
 import 'dart:js_interop';
 import 'package:maplibre_gl_web/src/interop/interop.dart';
 import 'package:maplibre_gl_web/src/interop/ui/control/attribution_control_interop.dart';
@@ -11,7 +12,10 @@ class AttributionControlOptions
   }) =>
       AttributionControlOptions.fromJsObject(AttributionControlOptionsJsImpl(
         compact: compact,
-        customAttribution: customAttribution?.map((s) => s.toJS).toList().toJS,
+        // Use JSON roundtrip for WASM compatibility - List.toJS has type issues in dart2wasm
+        customAttribution: customAttribution != null
+            ? jsonParse(jsonEncode(customAttribution))
+            : null,
       ));
 
   /// Creates a new AttributionControlOptions from a [jsObject].

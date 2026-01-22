@@ -1,3 +1,4 @@
+import 'dart:convert' show jsonEncode;
 import 'dart:js_interop';
 import 'interop/js.dart';
 
@@ -60,8 +61,9 @@ JSAny? jsify(Object? dartObject) {
   if (dartObject is num) return dartObject.toJS;
   if (dartObject is bool) return dartObject.toJS;
   if (dartObject is List) {
-    final jsArray = dartObject.map((e) => jsify(e)).toList();
-    return jsArray.toJS;
+    // Use JSON roundtrip for reliable WASM compatibility
+    // Direct .toJS on List<JSAny?> has type issues in dart2wasm
+    return jsonParse(jsonEncode(dartObject));
   }
   if (dartObject is Map) {
     return jsifyMap(Map<String, dynamic>.from(dartObject));
