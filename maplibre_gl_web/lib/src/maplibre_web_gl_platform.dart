@@ -976,12 +976,40 @@ class MapLibreMapController extends MapLibrePlatform
         ? Map<String, dynamic>.from(propertiesRaw as Map)
         : null;
 
+    // Deep convert coordinates to ensure proper Dart List types for WASM compatibility
+    final coordinates = _deepConvertCoordinates(geometry["coordinates"]);
+
     return Feature(
-      geometry: Geometry(
-          type: geometry["type"], coordinates: geometry["coordinates"]),
+      geometry: Geometry(type: geometry["type"], coordinates: coordinates),
       properties: properties,
       id: properties?["id"] ?? geojsonFeature["id"],
     );
+  }
+
+  /// Recursively converts coordinates to proper Dart List types.
+  /// This ensures WASM compatibility by converting any proxy/wrapper types.
+  dynamic _deepConvertCoordinates(dynamic value) {
+    if (value == null) return null;
+    if (value is num || value is String || value is bool) return value;
+
+    // Handle list-like values (coordinates are always arrays in GeoJSON)
+    if (value is List) {
+      return value.map(_deepConvertCoordinates).toList();
+    }
+
+    // Fallback for WASM types that don't pass 'is List' check
+    // Try to iterate and convert
+    try {
+      final asDynamic = value as dynamic;
+      final result = <dynamic>[];
+      for (final item in asDynamic) {
+        result.add(_deepConvertCoordinates(item));
+      }
+      return result;
+    } catch (_) {
+      // If iteration fails, return as-is
+      return value;
+    }
   }
 
   FeatureCollection _makeFeatureCollection(Map<String, dynamic> geojson) {

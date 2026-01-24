@@ -55,11 +55,20 @@ Map<String, dynamic> dartifyMap(Object? jsObject) {
 }
 
 /// Converts a Dart object to a JavaScript object.
+///
+/// This function handles WASM compatibility issues where 'is List' checks
+/// can fail even for actual List objects in dart2wasm.
 JSAny? jsify(Object? dartObject) {
   if (dartObject == null) return null;
   if (dartObject is String) return dartObject.toJS;
   if (dartObject is num) return dartObject.toJS;
   if (dartObject is bool) return dartObject.toJS;
+
+  // Check if it's already a JSAny (including JSArray from JS interop)
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (dartObject is JSAny) {
+    return dartObject;
+  }
 
   // For objects that already have jsObject property (like Layer, Source wrappers)
   if (dartObject is JsObjectWrapper) {
@@ -70,24 +79,54 @@ JSAny? jsify(Object? dartObject) {
     return jsifyMap(Map<String, dynamic>.from(dartObject));
   }
 
-  // Check for List explicitly first (more reliable in WASM than Iterable check)
+  // Check for List explicitly first
   if (dartObject is List) {
-    return jsonParse(jsonEncode(dartObject));
+    return _jsifyList(dartObject);
   }
 
   // Check for other Iterables
   if (dartObject is Iterable) {
-    return jsonParse(jsonEncode(dartObject.toList()));
+    return _jsifyList(dartObject.toList());
+  }
+
+  // WASM fallback: try to iterate on any unknown object
+  // In dart2wasm, 'is List' checks can fail even for actual List objects
+  // so we try iteration before falling back to JSON
+  try {
+    final asDynamic = dartObject as dynamic;
+    // Try to iterate - this works for lists even when 'is List' fails
+    return _jsifyListDynamic(asDynamic);
+  } catch (_) {
+    // Not iterable, fall through
   }
 
   // Fallback: try JSON roundtrip for any JSON-serializable object
-  // This handles cases where type checks fail in WASM
   try {
     return jsonParse(jsonEncode(dartObject));
   } catch (_) {
     // Last resort: assume it's already a JSAny
     return dartObject as JSAny?;
   }
+}
+
+/// Converts a Dart List to a JavaScript array by building it element by element.
+/// This avoids issues with List.toJS in dart2wasm.
+JSArray<JSAny?> _jsifyList(List<dynamic> list) {
+  final jsArray = <JSAny?>[];
+  for (final item in list) {
+    jsArray.add(jsify(item));
+  }
+  return jsArrayOf(jsArray);
+}
+
+/// Converts a dynamic list-like object to a JavaScript array.
+/// Used as a fallback when 'is List' checks fail in WASM.
+JSAny _jsifyListDynamic(dynamic listLike) {
+  final jsArray = <JSAny?>[];
+  for (final item in listLike) {
+    jsArray.add(jsify(item));
+  }
+  return jsArrayOf(jsArray);
 }
 
 /// Converts a Dart Map to a JavaScript object.
