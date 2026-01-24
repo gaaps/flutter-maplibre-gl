@@ -89,9 +89,9 @@ class Geometry extends JsObjectWrapper<GeometryJsImpl> {
     String? type,
     dynamic coordinates,
   }) {
-    print('[maplibre_gl] Geometry: coordinates type=${coordinates.runtimeType}');
+    utils.wasmLog('[maplibre_gl] Geometry: coordinates type=${coordinates.runtimeType}');
     final jsified = utils.jsify(coordinates);
-    print('[maplibre_gl] Geometry: jsified type=${jsified.runtimeType}');
+    utils.wasmLog('[maplibre_gl] Geometry: jsified type=${jsified.runtimeType}');
 
     return Geometry.fromJsObject(GeometryJsImpl(
       type: type,
