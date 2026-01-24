@@ -14,7 +14,7 @@ class AttributionControlOptions
         compact: compact,
         // Use JSON roundtrip for WASM compatibility - List.toJS has type issues in dart2wasm
         customAttribution: customAttribution != null
-            ? jsonParse(jsonEncode(customAttribution))
+            ? jsonParse(jsonEncode(customAttribution)) as JSArray<JSString>?
             : null,
       ));
 

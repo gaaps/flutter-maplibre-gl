@@ -2,15 +2,6 @@ import 'dart:convert' show jsonEncode;
 import 'dart:js_interop';
 import 'interop/js.dart';
 
-/// WASM-compatible console logging
-@JS('console.log')
-external void _consoleLog(JSAny? message);
-
-/// Logs a message to the browser console (works in both dart2js and dart2wasm)
-void wasmLog(String message) {
-  _consoleLog(message.toJS);
-}
-
 /// Returns Dart representation from JS Object.
 dynamic dartify(Object? jsObject) {
   if (_isBasicType(jsObject)) {
@@ -68,8 +59,6 @@ Map<String, dynamic> dartifyMap(Object? jsObject) {
 /// This function handles WASM compatibility issues where 'is List' checks
 /// can fail even for actual List objects in dart2wasm.
 JSAny? jsify(Object? dartObject) {
-  wasmLog('[maplibre_gl] jsify: input type=${dartObject.runtimeType}');
-
   if (dartObject == null) return null;
   if (dartObject is String) return dartObject.toJS;
   if (dartObject is num) return dartObject.toJS;
@@ -78,53 +67,44 @@ JSAny? jsify(Object? dartObject) {
   // Check if it's already a JSAny (including JSArray from JS interop)
   // ignore: invalid_runtime_check_with_js_interop_types
   if (dartObject is JSAny) {
-    wasmLog('[maplibre_gl] jsify: already JSAny, returning as-is');
     return dartObject;
   }
 
   // For objects that already have jsObject property (like Layer, Source wrappers)
   if (dartObject is JsObjectWrapper) {
-    wasmLog('[maplibre_gl] jsify: JsObjectWrapper, extracting jsObject');
     return dartObject.jsObject as JSAny;
   }
 
   if (dartObject is Map) {
-    wasmLog('[maplibre_gl] jsify: handling as Map');
     return jsifyMap(Map<String, dynamic>.from(dartObject));
   }
 
   // Check for List explicitly first
   if (dartObject is List) {
-    wasmLog('[maplibre_gl] jsify: handling as List');
     return _jsifyList(dartObject);
   }
 
   // Check for other Iterables
   if (dartObject is Iterable) {
-    wasmLog('[maplibre_gl] jsify: handling as Iterable');
     return _jsifyList(dartObject.toList());
   }
 
   // WASM fallback: try to iterate on any unknown object
   // In dart2wasm, 'is List' checks can fail even for actual List objects
   // so we try iteration before falling back to JSON
-  wasmLog('[maplibre_gl] jsify: fallback iteration for ${dartObject.runtimeType}');
   try {
     final asDynamic = dartObject as dynamic;
     // Try to iterate - this works for lists even when 'is List' fails
     return _jsifyListDynamic(asDynamic);
-  } catch (e) {
+  } catch (_) {
     // Not iterable, fall through
-    wasmLog('[maplibre_gl] jsify: iteration failed: $e');
   }
 
   // Fallback: try JSON roundtrip for any JSON-serializable object
-  wasmLog('[maplibre_gl] jsify: using JSON roundtrip');
   try {
     return jsonParse(jsonEncode(dartObject));
-  } catch (e) {
+  } catch (_) {
     // Last resort: assume it's already a JSAny
-    wasmLog('[maplibre_gl] jsify: JSON roundtrip failed: $e, attempting cast');
     return dartObject as JSAny?;
   }
 }

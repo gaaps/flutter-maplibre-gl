@@ -26,7 +26,7 @@ class VectorSource extends Source<VectorSourceJsImpl> {
     return VectorSource.fromJsObject(VectorSourceJsImpl(
       type: 'vector',
       // Use JSON roundtrip for WASM compatibility - List.toJS has type issues in dart2wasm
-      tiles: tiles != null ? jsonParse(jsonEncode(tiles)) : null,
+      tiles: tiles != null ? jsonParse(jsonEncode(tiles)) as JSArray<JSString>? : null,
     ));
   }
 
