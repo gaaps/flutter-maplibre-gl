@@ -59,6 +59,8 @@ Map<String, dynamic> dartifyMap(Object? jsObject) {
 /// This function handles WASM compatibility issues where 'is List' checks
 /// can fail even for actual List objects in dart2wasm.
 JSAny? jsify(Object? dartObject) {
+  print('[maplibre_gl] jsify: input type=${dartObject.runtimeType}');
+
   if (dartObject == null) return null;
   if (dartObject is String) return dartObject.toJS;
   if (dartObject is num) return dartObject.toJS;
@@ -67,44 +69,53 @@ JSAny? jsify(Object? dartObject) {
   // Check if it's already a JSAny (including JSArray from JS interop)
   // ignore: invalid_runtime_check_with_js_interop_types
   if (dartObject is JSAny) {
+    print('[maplibre_gl] jsify: already JSAny, returning as-is');
     return dartObject;
   }
 
   // For objects that already have jsObject property (like Layer, Source wrappers)
   if (dartObject is JsObjectWrapper) {
+    print('[maplibre_gl] jsify: JsObjectWrapper, extracting jsObject');
     return dartObject.jsObject as JSAny;
   }
 
   if (dartObject is Map) {
+    print('[maplibre_gl] jsify: handling as Map');
     return jsifyMap(Map<String, dynamic>.from(dartObject));
   }
 
   // Check for List explicitly first
   if (dartObject is List) {
+    print('[maplibre_gl] jsify: handling as List');
     return _jsifyList(dartObject);
   }
 
   // Check for other Iterables
   if (dartObject is Iterable) {
+    print('[maplibre_gl] jsify: handling as Iterable');
     return _jsifyList(dartObject.toList());
   }
 
   // WASM fallback: try to iterate on any unknown object
   // In dart2wasm, 'is List' checks can fail even for actual List objects
   // so we try iteration before falling back to JSON
+  print('[maplibre_gl] jsify: fallback iteration for ${dartObject.runtimeType}');
   try {
     final asDynamic = dartObject as dynamic;
     // Try to iterate - this works for lists even when 'is List' fails
     return _jsifyListDynamic(asDynamic);
-  } catch (_) {
+  } catch (e) {
     // Not iterable, fall through
+    print('[maplibre_gl] jsify: iteration failed: $e');
   }
 
   // Fallback: try JSON roundtrip for any JSON-serializable object
+  print('[maplibre_gl] jsify: using JSON roundtrip');
   try {
     return jsonParse(jsonEncode(dartObject));
-  } catch (_) {
+  } catch (e) {
     // Last resort: assume it's already a JSAny
+    print('[maplibre_gl] jsify: JSON roundtrip failed: $e, attempting cast');
     return dartObject as JSAny?;
   }
 }

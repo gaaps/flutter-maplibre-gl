@@ -971,13 +971,19 @@ class MapLibreMapController extends MapLibrePlatform
   Feature _makeFeature(Map<String, dynamic> geojsonFeature) {
     final geometry =
         Map<String, dynamic>.from(geojsonFeature["geometry"] as Map);
+    final rawCoordinates = geometry["coordinates"];
+
+    print('[maplibre_gl] _makeFeature: raw coordinates type=${rawCoordinates.runtimeType}, value=$rawCoordinates');
+
     final propertiesRaw = geojsonFeature["properties"];
     final properties = propertiesRaw != null
         ? Map<String, dynamic>.from(propertiesRaw as Map)
         : null;
 
     // Deep convert coordinates to ensure proper Dart List types for WASM compatibility
-    final coordinates = _deepConvertCoordinates(geometry["coordinates"]);
+    final coordinates = _deepConvertCoordinates(rawCoordinates);
+
+    print('[maplibre_gl] _makeFeature: converted coordinates type=${coordinates.runtimeType}');
 
     return Feature(
       geometry: Geometry(type: geometry["type"], coordinates: coordinates),
@@ -989,16 +995,20 @@ class MapLibreMapController extends MapLibrePlatform
   /// Recursively converts coordinates to proper Dart List types.
   /// This ensures WASM compatibility by converting any proxy/wrapper types.
   dynamic _deepConvertCoordinates(dynamic value) {
+    print('[maplibre_gl] _deepConvertCoordinates: input type=${value.runtimeType}');
+
     if (value == null) return null;
     if (value is num || value is String || value is bool) return value;
 
     // Handle list-like values (coordinates are always arrays in GeoJSON)
     if (value is List) {
+      print('[maplibre_gl] _deepConvertCoordinates: handling as List');
       return value.map(_deepConvertCoordinates).toList();
     }
 
     // Fallback for WASM types that don't pass 'is List' check
     // Try to iterate and convert
+    print('[maplibre_gl] _deepConvertCoordinates: fallback iteration for type=${value.runtimeType}');
     try {
       final asDynamic = value as dynamic;
       final result = <dynamic>[];
@@ -1006,8 +1016,9 @@ class MapLibreMapController extends MapLibrePlatform
         result.add(_deepConvertCoordinates(item));
       }
       return result;
-    } catch (_) {
+    } catch (e) {
       // If iteration fails, return as-is
+      print('[maplibre_gl] _deepConvertCoordinates: iteration failed: $e');
       return value;
     }
   }

@@ -88,11 +88,16 @@ class Geometry extends JsObjectWrapper<GeometryJsImpl> {
   factory Geometry({
     String? type,
     dynamic coordinates,
-  }) =>
-      Geometry.fromJsObject(GeometryJsImpl(
-        type: type,
-        coordinates: utils.jsify(coordinates),
-      ));
+  }) {
+    print('[maplibre_gl] Geometry: coordinates type=${coordinates.runtimeType}');
+    final jsified = utils.jsify(coordinates);
+    print('[maplibre_gl] Geometry: jsified type=${jsified.runtimeType}');
+
+    return Geometry.fromJsObject(GeometryJsImpl(
+      type: type,
+      coordinates: jsified,
+    ));
+  }
 
   /// Creates a new Geometry from a [jsObject].
   Geometry.fromJsObject(super.jsObject) : super.fromJsObject();
