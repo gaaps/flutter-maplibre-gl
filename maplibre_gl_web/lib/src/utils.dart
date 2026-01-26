@@ -64,17 +64,15 @@ JSAny? jsify(Object? dartObject) {
   if (dartObject is num) return dartObject.toJS;
   if (dartObject is bool) return dartObject.toJS;
 
-  // Check if it's already a JSAny (including JSArray from JS interop)
-  // ignore: invalid_runtime_check_with_js_interop_types
-  if (dartObject is JSAny) {
-    return dartObject;
-  }
-
   // For objects that already have jsObject property (like Layer, Source wrappers)
   if (dartObject is JsObjectWrapper) {
     return dartObject.jsObject as JSAny;
   }
 
+  // Check for Map/List/Iterable BEFORE JSAny check.
+  // In dart2js, Dart objects like Map can pass the 'is JSAny' check
+  // because Dart objects are JS objects under the hood, but they still
+  // need proper conversion to work correctly with JS libraries.
   if (dartObject is Map) {
     return jsifyMap(Map<String, dynamic>.from(dartObject));
   }
@@ -87,6 +85,12 @@ JSAny? jsify(Object? dartObject) {
   // Check for other Iterables
   if (dartObject is Iterable) {
     return _jsifyList(dartObject.toList());
+  }
+
+  // Check if it's already a JSAny (for genuine JS objects, not Dart collections)
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (dartObject is JSAny) {
+    return dartObject;
   }
 
   // WASM fallback: try to iterate on any unknown object
